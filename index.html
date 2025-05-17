@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema da Padaria do Seu João</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Padaria do Seu João</div>
+            <div class="data" id="data-atual">Data: --/--/----</div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="mudarAba('clientes')">Clientes</div>
+            <div class="tab" onclick="mudarAba('caderneta')">Caderneta</div>
+            <div class="tab" onclick="mudarAba('relatorios')">Relatórios</div>
+        </div>
+
+        <div id="mensagem" class="hidden alert"></div>
+
+        <!-- Área de Gravação de Áudio -->
+        <div class="audio-area">
+            <button id="btn-gravar" class="btn-audio">
+                <span id="icone-gravacao">🎤</span> Pressione para falar
+            </button>
+            <div id="status-gravacao">Pronto para gravar</div>
+            <div id="resultado-audio" class="hidden"></div>
+        </div>
+
+        <!-- Aba de Clientes -->
+        <div id="clientes" class="content active">
+            <h2>Gerenciar Clientes</h2>
+            
+            <div class="search-bar">
+                <input type="text" id="busca-cliente" placeholder="Buscar cliente por nome..." onkeyup="buscarClientes()">
+            </div>
+            
+            <div id="form-cliente">
+                <h3>Adicionar Novo Cliente</h3>
+                <div class="form-group">
+                    <label for="nome">Nome do Cliente:</label>
+                    <input type="text" id="nome" placeholder="Nome completo">
+                </div>
+                <div class="form-group">
+                    <label for="telefone">Telefone:</label>
+                    <input type="text" id="telefone" placeholder="(00) 00000-0000">
+                </div>
+                <div class="form-group">
+                    <label for="endereco">Endereço:</label>
+                    <input type="text" id="endereco" placeholder="Rua, número, bairro">
+                </div>
+                <div class="form-group">
+                    <label for="limite">Limite de Crédito (R$):</label>
+                    <input type="number" id="limite" placeholder="0.00" min="0" step="0.01">
+                </div>
+
+                <button onclick="salvarCliente()">Salvar Cliente</button>
+            </div>
+
+            <h3>Lista de Clientes</h3>
+            <table id="tabela-clientes">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Telefone</th>
+                        <th>Endereço</th>
+                        <th>Saldo Devedor</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Conteúdo será preenchido via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Aba de Caderneta -->
+        <div id="caderneta" class="content">
+            <h2>Caderneta de Fiado</h2>
+            
+            <div class="search-bar">
+                <input type="text" id="busca-caderneta" placeholder="Buscar cliente..." onkeyup="buscarCaderneta()">
+            </div>
+            
+            <div id="form-compra">
+                <h3>Registrar Compra Fiado</h3>
+                <div class="form-group">
+                    <label for="cliente-compra">Cliente:</label>
+                    <select id="cliente-compra">
+                        <option value="">Selecione um cliente</option>
+                        <!-- Opções serão preenchidas via JavaScript -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="descricao">Descrição da Compra:</label>
+                    <input type="text" id="descricao" placeholder="Ex: 2 pães franceses, 1 leite...">
+                </div>
+                <div class="form-group">
+                    <label for="valor">Valor (R$):</label>
+                    <input type="number" id="valor" placeholder="0.00" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="data-compra">Data:</label>
+                    <input type="date" id="data-compra">
+                </div>
+
+                <button onclick="registrarCompra()">Registrar Compra</button>
+            </div>
+
+            <div id="form-pagamento" class="hidden">
+                <h3>Registrar Pagamento</h3>
+                <div class="form-group">
+                    <label for="cliente-pagamento">Cliente:</label>
+                    <select id="cliente-pagamento">
+                        <option value="">Selecione um cliente</option>
+                        <!-- Opções serão preenchidas via JavaScript -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="valor-pagamento">Valor do Pagamento (R$):</label>
+                    <input type="number" id="valor-pagamento" placeholder="0.00" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="data-pagamento">Data:</label>
+                    <input type="date" id="data-pagamento">
+                </div>
+
+                <button onclick="registrarPagamento()">Registrar Pagamento</button>
+            </div>
+
+            <div class="flex">
+                <button id="btn-mostrar-compra" class="active" onclick="mostrarFormCompra()">Registrar Compra</button>
+                <button id="btn-mostrar-pagamento" onclick="mostrarFormPagamento()">Registrar Pagamento</button>
+            </div>
+
+            <h3>Movimentações do Cliente</h3>
+            <div class="form-group">
+                <label for="cliente-movimentacoes">Selecione o Cliente:</label>
+                <select id="cliente-movimentacoes" onchange="carregarMovimentacoes()">
+                    <option value="">Selecione um cliente</option>
+                    <!-- Opções serão preenchidas via JavaScript -->
+                </select>
+            </div>
+
+            <div id="saldo-cliente" class="resumo-card hidden">
+                <h3>Resumo do Cliente</h3>
+                <p class="big-text">Cliente: <span id="nome-cliente-resumo">--</span></p>
+                <p class="big-text">Saldo Devedor:</p>
+                <p class="resumo-valor" id="saldo-devedor">R$ 0,00</p>
+                <p class="big-text">Limite Disponível:</p>
+                <p class="resumo-valor" id="limite-disponivel">R$ 0,00</p>
+            </div>
+
+            <table id="tabela-movimentacoes">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Tipo</th>
+                        <th>Descrição</th>
+                        <th>Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Conteúdo será preenchido via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Aba de Relatórios -->
+        <div id="relatorios" class="content">
+            <h2>Relatórios</h2>
+            
+            <div class="resumo-card">
+                <h3>Resumo da Caderneta</h3>
+                <p class="big-text">Total de Clientes:</p>
+                <p class="resumo-valor" id="total-clientes">0</p>
+                <p class="big-text">Total a Receber:</p>
+                <p class="resumo-valor" id="total-receber">R$ 0,00</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="tipo-relatorio">Tipo de Relatório:</label>
+                <select id="tipo-relatorio" onchange="mudarTipoRelatorio()">
+                    <option value="pendentes">Clientes com Pagamentos Pendentes</option>
+                    <option value="semanal">Relatório Semanal</option>
+                    <option value="mensal">Relatório Mensal</option>
+                </select>
+            </div>
+            
+            <div id="filtro-periodo" class="hidden">
+                <div class="form-group">
+                    <label for="data-inicio">Data Inicial:</label>
+                    <input type="date" id="data-inicio">
+                </div>
+                <div class="form-group">
+                    <label for="data-fim">Data Final:</label>
+                    <input type="date" id="data-fim">
+                </div>
+                <button onclick="gerarRelatorioPeriodo()">Gerar Relatório</button>
+            </div>
+            
+            <div id="relatorio-atual">
+                <h3>Clientes com Pagamentos Pendentes</h3>
+                <table id="tabela-inadimplentes">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Telefone</th>
+                            <th>Saldo Devedor</th>
+                            <th>Última Compra</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Conteúdo será preenchido via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+                <button onclick="imprimirRelatorio()">Imprimir Relatório</button>
+                <button onclick="exportarDados()" class="btn-secundario">Exportar Dados</button>
+                <button onclick="lerRelatorio()" class="btn-audio">Ouvir Relatório</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
