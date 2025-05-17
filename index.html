@@ -30,6 +30,7 @@
             <div id="resultado-audio" class="hidden"></div>
         </div>
 
+
         <!-- Aba de Clientes -->
         <div id="clientes" class="content active">
             <h2>Gerenciar Clientes</h2>
@@ -81,10 +82,13 @@
         <div id="caderneta" class="content">
             <h2>Caderneta de Fiado</h2>
             
-            <div class="search-bar">
-                <input type="text" id="busca-caderneta" placeholder="Buscar cliente..." onkeyup="buscarCaderneta()">
-            </div>
+            <p>Selecione <b>registrar compra</b> ou <b>registrar pagamento</b></p>
             
+            <div class="flex">
+                <button id="btn-mostrar-compra" class="active" onclick="mostrarFormCompra()">Registrar Compra</button>
+                <button id="btn-mostrar-pagamento" onclick="mostrarFormPagamento()">Registrar Pagamento</button>
+            </div>
+
             <div id="form-compra">
                 <h3>Registrar Compra Fiado</h3>
                 <div class="form-group">
@@ -131,10 +135,7 @@
                 <button onclick="registrarPagamento()">Registrar Pagamento</button>
             </div>
 
-            <div class="flex">
-                <button id="btn-mostrar-compra" class="active" onclick="mostrarFormCompra()">Registrar Compra</button>
-                <button id="btn-mostrar-pagamento" onclick="mostrarFormPagamento()">Registrar Pagamento</button>
-            </div>
+            
 
             <h3>Movimentações do Cliente</h3>
             <div class="form-group">
@@ -222,7 +223,7 @@
             <div class="form-group" style="margin-top: 20px;">
                 <button onclick="imprimirRelatorio()">Imprimir Relatório</button>
                 <button onclick="exportarDados()" class="btn-secundario">Exportar Dados</button>
-                <button onclick="lerRelatorio()" class="btn-audio">Ouvir Relatório</button>
+                <button onclick="lerRelatorioEmVozAlta()" class="btn-audio">Ouvir Relatório</button>
             </div>
         </div>
     </div>

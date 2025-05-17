@@ -538,85 +538,63 @@
         }
 
         // Funções para reconhecimento de voz
-        let recognition;
-        let reconhecendoVoz = false;
-        let campoAtual = null;
+const btnGravar = document.getElementById('btn-gravar');
+const statusGravacao = document.getElementById('status-gravacao');
 
-        function iniciarReconhecimentoVoz(campo) {
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                alert('Seu navegador não suporta reconhecimento de voz. Use um navegador mais recente como Chrome ou Edge.');
+const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+recognition.lang = 'pt-BR';
+recognition.interimResults = false;
+recognition.maxAlternatives = 1;
+
+btnGravar.addEventListener('click', () => {
+    recognition.start();
+    statusGravacao.textContent = 'Ouvindo...';
+});
+
+recognition.onresult = (event) => {
+    const comando = event.results[0][0].transcript.toLowerCase().trim();
+    statusGravacao.textContent = `Você disse: "${comando}"`;
+    interpretarComando(comando);
+};
+
+recognition.onerror = (event) => {
+    statusGravacao.textContent = 'Erro: ' + event.error;
+};
+
+function interpretarComando(comando) {
+    const campos = [
+        { id: 'nome', label: ['nome do cliente', 'nome'] },
+        { id: 'telefone', label: ['telefone'] },
+        { id: 'endereco', label: ['endereço'] },
+        { id: 'limite', label: ['limite de crédito', 'limite'] },
+        { id: 'descricao', label: ['descrição da compra', 'descrição'] },
+        { id: 'valor', label: ['valor'] },
+        { id: 'data-compra', label: ['data da compra', 'data'] },
+        { id: 'valor-pagamento', label: ['valor do pagamento'] },
+        { id: 'data-pagamento', label: ['data do pagamento'] },
+        { id: 'data-inicio', label: ['data inicial'] },
+        { id: 'data-fim', label: ['data final'] }
+    ];
+
+    for (const campo of campos) {
+        for (const palavraChave of campo.label) {
+            if (comando.includes(palavraChave)) {
+                const valor = comando.replace(palavraChave, '').trim().replace(/^[:\-]/, '').trim();
+                const input = document.getElementById(campo.id);
+                if (input) {
+                    input.value = valor;
+                    statusGravacao.textContent = `Preenchido: ${palavraChave} com "${valor}"`;
+                }
                 return;
             }
-            
-            campoAtual = campo;
-            
-            // Inicializar reconhecimento de voz
-            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-            recognition.lang = 'pt-BR';
-            recognition.continuous = false;
-            recognition.interimResults = false;
-            
-            recognition.onstart = function() {
-                reconhecendoVoz = true;
-                document.getElementById('btn-audio-' + campo).classList.add('gravando');
-                document.getElementById('btn-audio-' + campo).innerHTML = '🔴 Gravando...';
-            };
-            
-            recognition.onresult = function(event) {
-                const textoReconhecido = event.results[0][0].transcript;
-                
-                // Tratar o texto reconhecido de acordo com o campo
-                if (campo === 'cliente') {
-                    document.getElementById('nome').value = textoReconhecido;
-                } else if (campo === 'descricao') {
-                    document.getElementById('descricao').value = textoReconhecido;
-                } else if (campo === 'busca') {
-                    document.getElementById('busca-cliente').value = textoReconhecido;
-                    buscarClientes();
-                } else if (campo === 'busca-caderneta') {
-                    document.getElementById('busca-caderneta').value = textoReconhecido;
-                    buscarCaderneta();
-                } else if (campo === 'valor') {
-                    // Tentar extrair um número do texto
-                    const valorTexto = textoReconhecido.replace(/[^0-9,\.]/g, '').replace(',', '.');
-                    const valor = parseFloat(valorTexto);
-                    if (!isNaN(valor)) {
-                        document.getElementById('valor').value = valor;
-                    } else {
-                        alert('Não consegui entender um valor. Por favor, diga apenas o número.');
-                    }
-                } else if (campo === 'valor-pagamento') {
-                    const valorTexto = textoReconhecido.replace(/[^0-9,\.]/g, '').replace(',', '.');
-                    const valor = parseFloat(valorTexto);
-                    if (!isNaN(valor)) {
-                        document.getElementById('valor-pagamento').value = valor;
-                    } else {
-                        alert('Não consegui entender um valor. Por favor, diga apenas o número.');
-                    }
-                }
-            };
-            
-            recognition.onerror = function(event) {
-                console.error('Erro no reconhecimento de voz: ', event.error);
-                finalizarReconhecimentoVoz();
-            };
-            
-            recognition.onend = function() {
-                finalizarReconhecimentoVoz();
-            };
-            
-            // Iniciar reconhecimento
-            recognition.start();
         }
+    }
 
-        function finalizarReconhecimentoVoz() {
-            reconhecendoVoz = false;
-            if (campoAtual) {
-                document.getElementById('btn-audio-' + campoAtual).classList.remove('gravando');
-                document.getElementById('btn-audio-' + campoAtual).innerHTML = '🎤';
-            }
-            campoAtual = null;
-        }
+    statusGravacao.textContent = 'Não consegui identificar o campo.';
+}
+
+
+
 
         // Gerar relatório semanal
         function gerarRelatorioSemanal() {
@@ -810,55 +788,81 @@
             janelaImpressao.print();
         }
 
-        // Ler relatório semanal em voz alta
-        function lerRelatorioEmVozAlta() {
-            if (!('speechSynthesis' in window)) {
-                alert('Seu navegador não suporta síntese de voz. Use um navegador mais recente como Chrome ou Edge.');
-                return;
-            }
-            
-            // Calcular totais para o relatório
-            let totalClientes = clientes.length;
-            let totalReceber = 0;
-            let clientesDevedores = 0;
-            
-            clientes.forEach(cliente => {
-                const saldo = calcularSaldoDevedor(cliente.id);
-                if (saldo > 0) {
-                    totalReceber += saldo;
-                    clientesDevedores++;
-                }
-            });
-            
-            // Criar texto para ser lido
-            const textoParaLer = `
-                Relatório Semanal da Padaria.
-                Olá Seu João, aqui está o resumo da sua padaria.
-                Total de clientes cadastrados: ${totalClientes}.
-                Clientes com compras pendentes: ${clientesDevedores}.
-                Total a receber: ${formatarMoeda(totalReceber)}.
-                Os principais clientes com débitos são: ${
-                    clientes
-                        .map(cliente => ({
-                            ...cliente,
-                            saldo: calcularSaldoDevedor(cliente.id)
-                        }))
-                        .filter(cliente => cliente.saldo > 0)
-                        .sort((a, b) => b.saldo - a.saldo)
-                        .slice(0, 3)
-                        .map(cliente => `${cliente.nome}, devendo ${formatarMoeda(cliente.saldo)}`)
-                        .join('; ')
-                }
-            `;
-            
-            // Configurar e iniciar a síntese de voz
-            const utterance = new SpeechSynthesisUtterance(textoParaLer);
-            utterance.lang = 'pt-BR';
-            utterance.rate = 0.9; // Um pouco mais lento para facilitar o entendimento
-            utterance.pitch = 1;
-            
-            window.speechSynthesis.speak(utterance);
-        }
+
+
+        //ler relatorio
+function lerRelatorioEmVozAlta() {
+    if (!('speechSynthesis' in window)) {
+        alert('Seu navegador não suporta síntese de voz.');
+        return;
+    }
+
+    const synth = window.speechSynthesis;
+
+    // Garantir que as vozes estejam carregadas
+    let vocesDisponiveis = synth.getVoices();
+    if (vocesDisponiveis.length === 0) {
+        // Em alguns navegadores as vozes demoram para carregar
+        window.speechSynthesis.onvoiceschanged = () => lerRelatorioEmVozAlta();
+        return;
+    }
+
+    const vozPtBr = vocesDisponiveis.find(voz => 
+        voz.lang === 'pt-BR' || voz.lang.startsWith('pt')
+    );
+
+    // Cálculo dos dados reais
+    let totalClientes = clientes.length;
+    let totalReceber = 0;
+    let clientesDevedores = 0;
+
+    const devedores = clientes
+        .map(cliente => {
+            const saldo = calcularSaldoDevedor(cliente.id);
+            return { ...cliente, saldo };
+        })
+        .filter(cliente => cliente.saldo > 0);
+
+    devedores.forEach(cliente => {
+        totalReceber += cliente.saldo;
+        clientesDevedores++;
+    });
+
+    const principais = devedores
+        .sort((a, b) => b.saldo - a.saldo)
+        .slice(0, 3)
+        .map(c => `${c.nome}, devendo ${formatarMoeda(c.saldo)}`)
+        .join('; ');
+
+    // Texto final com dados reais
+    const textoParaLer = `
+        Relatório semanal da Padaria.
+        Olá, Seu João! Aqui está o resumo da sua padaria.
+        Total de clientes cadastrados: ${totalClientes}.
+        Clientes com compras pendentes: ${clientesDevedores}.
+        Total a receber: ${formatarMoeda(totalReceber)}.
+        Os principais clientes com débitos são: ${principais || 'Nenhum cliente em débito.'}
+    `;
+
+    const utterance = new SpeechSynthesisUtterance(textoParaLer);
+    utterance.lang = 'pt-BR';
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+
+    if (vozPtBr) {
+        utterance.voice = vozPtBr;
+    }
+
+    synth.speak(utterance);
+}
+
+
+        // Garantir que as vozes estejam disponíveis antes de chamar
+        window.speechSynthesis.onvoiceschanged = () => {
+            // Isso garante que a função use as vozes corretas mesmo em navegadores que carregam depois
+        };
+
+
 
         // Inicializar o sistema quando a página for carregada
         window.onload = function() {
