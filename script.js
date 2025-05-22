@@ -18,10 +18,10 @@
             if (localStorage.getItem('padaria_pagamentos')) {
                 pagamentos = JSON.parse(localStorage.getItem('padaria_pagamentos'));
             }
-            if (localStorage.getItem('padaria_gastos')) {
+           if (localStorage.getItem('padaria_gastos')) {
                 gastos = JSON.parse(localStorage.getItem('padaria_gastos'));
-                atualizarTabelaGastos(); // nova função
             }
+
 
             
             // Atualizar a data atual
@@ -611,7 +611,7 @@ function interpretarComando(comando) {
         { id: 'telefone', label: ['telefone'] },
         { id: 'endereco', label: ['endereço'] },
         { id: 'limite', label: ['limite de crédito', 'limite'] },
-        { id: 'descricao', label: ['descrição da compra', 'descrição'] },
+        { id: 'descricao', label: ['descrição da compra', 'descrição', 'compra'] },
         { id: 'valor', label: ['valor'] },
         { id: 'data-compra', label: ['data da compra', 'data'] },
         { id: 'valor-pagamento', label: ['valor do pagamento'] },
@@ -841,64 +841,77 @@ function lerRelatorioEmVozAlta() {
         return;
     }
 
+    // Aguarda as vozes carregarem se ainda não estiverem prontas
     const synth = window.speechSynthesis;
 
-    // Garantir que as vozes estejam carregadas
-    let vocesDisponiveis = synth.getVoices();
-    if (vocesDisponiveis.length === 0) {
-        // Em alguns navegadores as vozes demoram para carregar
-        window.speechSynthesis.onvoiceschanged = () => lerRelatorioEmVozAlta();
-        return;
+    const executarLeitura = () => {
+        const vozPtBr = synth.getVoices().find(voz =>
+            voz.lang === 'pt-BR' || voz.lang.startsWith('pt')
+        );
+
+        let totalClientes = clientes.length;
+        let totalReceber = 0;
+        let clientesDevedores = 0;
+
+        const devedores = clientes
+            .map(cliente => {
+                const saldo = calcularSaldoDevedor(cliente.id);
+                return { ...cliente, saldo };
+            })
+            .filter(cliente => cliente.saldo > 0);
+
+        devedores.forEach(cliente => {
+            totalReceber += cliente.saldo;
+            clientesDevedores++;
+        });
+
+        const principais = devedores
+            .sort((a, b) => b.saldo - a.saldo)
+            .slice(0, 3)
+            .map(c => `${c.nome}, devendo ${formatarMoeda(c.saldo)}`)
+            .join('; ');
+
+        // Garantia para evitar erro
+        if (!Array.isArray(gastos)) gastos = [];
+
+        const totalGastos = gastos.reduce((soma, g) => soma + g.valor, 0);
+        const primeirosGastos = gastos.slice(0, 3)
+            .map(g => `${g.tipo}, ${g.descricao}, no valor de ${formatarMoeda(g.valor)}`)
+            .join('; ');
+
+        const texto = `
+            Relatório da Padaria do Seu João.
+            Total de clientes cadastrados: ${totalClientes}.
+            Clientes com pagamentos pendentes: ${clientesDevedores}.
+            Total a receber: ${formatarMoeda(totalReceber)}.
+            Principais clientes devedores: ${principais || 'Nenhum cliente em débito.'}.
+            Total de gastos com manutenção e equipamentos: ${formatarMoeda(totalGastos)}.
+            ${gastos.length > 0 ? `Alguns dos gastos registrados foram: ${primeirosGastos}.` : 'Nenhum gasto registrado até o momento.'}
+        `;
+
+        const utterance = new SpeechSynthesisUtterance(texto);
+        utterance.lang = 'pt-BR';
+        utterance.rate = 0.9;
+        utterance.pitch = 1;
+
+        if (vozPtBr) {
+            utterance.voice = vozPtBr;
+        }
+
+        synth.cancel(); // Cancela qualquer leitura em andamento
+        synth.speak(utterance);
+    };
+
+    // Verifica se as vozes já estão disponíveis, senão espera carregar
+    if (synth.getVoices().length === 0) {
+        window.speechSynthesis.onvoiceschanged = executarLeitura;
+    } else {
+        executarLeitura();
     }
-
-    const vozPtBr = vocesDisponiveis.find(voz => 
-        voz.lang === 'pt-BR' || voz.lang.startsWith('pt')
-    );
-
-    // Cálculo dos dados reais
-    let totalClientes = clientes.length;
-    let totalReceber = 0;
-    let clientesDevedores = 0;
-
-    const devedores = clientes
-        .map(cliente => {
-            const saldo = calcularSaldoDevedor(cliente.id);
-            return { ...cliente, saldo };
-        })
-        .filter(cliente => cliente.saldo > 0);
-
-    devedores.forEach(cliente => {
-        totalReceber += cliente.saldo;
-        clientesDevedores++;
-    });
-
-    const principais = devedores
-        .sort((a, b) => b.saldo - a.saldo)
-        .slice(0, 3)
-        .map(c => `${c.nome}, devendo ${formatarMoeda(c.saldo)}`)
-        .join('; ');
-
-    // Texto final com dados reais
-    const textoParaLer = `
-        Relatório semanal da Padaria.
-        Olá, Seu João! Aqui está o resumo da sua padaria.
-        Total de clientes cadastrados: ${totalClientes}.
-        Clientes com compras pendentes: ${clientesDevedores}.
-        Total a receber: ${formatarMoeda(totalReceber)}.
-        Os principais clientes com débitos são: ${principais || 'Nenhum cliente em débito.'}
-    `;
-
-    const utterance = new SpeechSynthesisUtterance(textoParaLer);
-    utterance.lang = 'pt-BR';
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
-
-    if (vozPtBr) {
-        utterance.voice = vozPtBr;
-    }
-
-    synth.speak(utterance);
 }
+
+
+
 
 
         // Garantir que as vozes estejam disponíveis antes de chamar
