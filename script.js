@@ -2,6 +2,8 @@
         let clientes = [];
         let compras = [];
         let pagamentos = [];
+        let gastos = [];
+
         let clienteEditandoId = null;
 
         // Inicializar o sistema carregando dados do localStorage
@@ -16,6 +18,11 @@
             if (localStorage.getItem('padaria_pagamentos')) {
                 pagamentos = JSON.parse(localStorage.getItem('padaria_pagamentos'));
             }
+            if (localStorage.getItem('padaria_gastos')) {
+                gastos = JSON.parse(localStorage.getItem('padaria_gastos'));
+                atualizarTabelaGastos(); // nova função
+            }
+
             
             // Atualizar a data atual
             const hoje = new Date();
@@ -499,6 +506,42 @@
                 
                 row.insertCell().innerText = ultimaCompra;
             });
+            // Total e lista de gastos
+                let totalGastos = gastos.reduce((total, g) => total + g.valor, 0);
+                const relatorioAtual = document.getElementById('relatorio-atual');
+
+                const htmlGastos = `
+                    <h3 style="margin-top: 40px;">Gastos com Equipamentos e Manutenção</h3>
+                    <p class="big-text">Total de Gastos:</p>
+                    <p class="resumo-valor">${formatarMoeda(totalGastos)}</p>
+                    <table style="margin-top: 10px;">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Descrição</th>
+                                <th>Valor</th>
+                                <th>Data</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${
+                                gastos.length > 0
+                                    ? gastos.map(g => `
+                                        <tr>
+                                            <td>${g.tipo}</td>
+                                            <td>${g.descricao}</td>
+                                            <td>${formatarMoeda(g.valor)}</td>
+                                            <td>${formatarData(g.data)}</td>
+                                        </tr>
+                                    `).join('')
+                                    : `<tr><td colspan="4" style="text-align:center">Nenhum gasto registrado</td></tr>`
+                            }
+                        </tbody>
+                    </table>
+                `;
+
+            relatorioAtual.innerHTML = relatorioAtual.innerHTML.split('<h3 style="margin-top: 40px;">Gastos com Equipamentos e Manutenção</h3>')[0] + htmlGastos;
+
         }
 
         // Imprimir relatório
@@ -512,6 +555,7 @@
                 clientes,
                 compras,
                 pagamentos,
+                gastos,
                 dataExportacao: new Date().toISOString()
             };
             
@@ -868,3 +912,54 @@ function lerRelatorioEmVozAlta() {
         window.onload = function() {
             inicializar();
         };
+
+
+// Função para trocar abas (caso não exista ainda)
+function trocarAba(id) {
+    const abas = document.querySelectorAll(".tab");
+    const conteudos = document.querySelectorAll(".content");
+    abas.forEach(tab => tab.classList.remove("active"));
+    conteudos.forEach(content => content.classList.remove("active"));
+    document.querySelector(`[onclick="trocarAba('${id}')"]`).classList.add("active");
+    document.getElementById(id).classList.add("active");
+}
+
+// Lógica para registro de gastos
+document.getElementById('form-gastos').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const tipo = document.getElementById('tipo-gasto').value;
+    const descricao = document.getElementById('descricao-gasto').value;
+    const valor = parseFloat(document.getElementById('valor-gasto').value);
+    const data = document.getElementById('data-gasto').value;
+
+    const gasto = { tipo, descricao, valor, data };
+    gastos.push(gasto);
+
+    localStorage.setItem('padaria_gastos', JSON.stringify(gastos));
+
+    atualizarTabelaGastos();
+    this.reset();
+});
+
+function atualizarTabelaGastos() {
+    const tabela = document.querySelector('#tabela-gastos tbody');
+    tabela.innerHTML = '';
+
+    if (gastos.length === 0) {
+        const linha = tabela.insertRow();
+        const celula = linha.insertCell();
+        celula.colSpan = 4;
+        celula.innerText = 'Nenhum gasto registrado';
+        celula.style.textAlign = 'center';
+        return;
+    }
+
+    gastos.forEach(g => {
+        const row = tabela.insertRow();
+        row.insertCell().innerText = g.tipo;
+        row.insertCell().innerText = g.descricao;
+        row.insertCell().innerText = formatarMoeda(g.valor);
+        row.insertCell().innerText = formatarData(g.data);
+    });
+}
